@@ -38,10 +38,10 @@
     # (pkgs.writeShellScriptBin "my-hello" ''
     #   echo "Hello, ${config.home.username}!"
     # '')
+    pkgs.devenv
 
     # Clipboard utility for Vim.
     pkgs.xclip
-    pkgs.haskellPackages.greenclip
     pkgs.picom
 
     pkgs.ngrok
@@ -50,9 +50,13 @@
 
     # Tmux session management.
     pkgs.sesh
+    pkgs.tree-sitter
 
     # Keyboard remapping
     pkgs.kanata
+
+    pkgs.netcat
+    pkgs.dbeaver-bin
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -117,6 +121,8 @@
     # Let Home Manager install and manage itself.
     home-manager.enable = true;
 
+    htop.enable = true;
+
     fzf = {
       enable = true;
 
@@ -164,10 +170,94 @@
       '';
     };
 
-    starship = {
+    oh-my-posh = {
       enable = true;
 
       enableZshIntegration = true;
+      settings = builtins.fromJSON(''
+        {
+          "version": 2,
+          "final_space": true,
+          "console_title_template": "{{ .Shell }} in {{ .Folder }}",
+          "transient_prompt": {
+            "background": "transparent",
+            "foreground_templates": [
+              "{{ if gt .Code 0 }}red{{ end }}",
+              "{{ if eq .Code 0 }}magenta{{ end }}"
+            ],
+            "template": "❯ "
+          },
+          "secondary_prompt": {
+            "background": "magenta",
+            "foreground": "transparent",
+            "template": "❯❯ "
+          },
+          "blocks": [
+            {
+              "type": "prompt",
+              "alignment": "left",
+              "newline": true,
+              "segments": [
+                {
+                  "type": "path",
+                  "style": "plain",
+                  "background": "transparent",
+                  "foreground": "blue",
+                  "template": "{{ .Path }}",
+                  "properties": {
+                    "style": "full"
+                  }
+                },
+                {
+                  "type": "git",
+                  "style": "plain",
+                  "background": "transparent",
+                  "foreground": "gray",
+                  "template": " {{ .HEAD }}{{ if or (.Working.Changed) (.Staging.Changed) }}*{{ end }} <cyan>{{ if gt .Behind 0 }}{{ end }}{{ if gt .Ahead 0 }}{{ end }}",
+                  "properties": {
+                    "branch_icon": "",
+                    "commit_icon": "@",
+                    "fetch_status": true
+                  }
+                }
+              ]
+            },
+            {
+              "type": "rprompt",
+              "overflow": "hidden",
+              "segments": [ 
+                {
+                  "type": "executiontime",
+                  "style": "plain",
+                  "background": "transparent",
+                  "foreground": "yellow",
+                  "template": "{{ .FormattedMs }}",
+                  "properties": {
+                    "threshold": 5000
+                  }
+                } 
+              ]
+            },
+            {
+              "type": "prompt",
+              "alignment": "left",
+              "newline": true,
+              "segments": [
+                {
+                  "type": "text",
+                  "style": "plain",
+                  "background": "transparent",
+                  "foreground_templates": [
+                    "{{ if gt .Code 0 }}red{{ end }}",
+                    "{{ if eq .Code 0 }}magenta{{ end }}"
+                  ],
+                  "template": "❯"
+                }
+              ]
+            }
+          ]
+        }
+      '');
     };
 
     lazygit.enable = true;
@@ -197,6 +287,9 @@
         ## COLORSCHEME: everforest
         set -g status-style 'bg=#272E33'
         set -g status-right ""
+
+        # Don't exit from tmux when closing a session
+        set -g detach-on-destroy off
 
         # moving between panes with vim movement keys
         bind h select-pane -L
