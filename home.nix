@@ -1,7 +1,6 @@
 { config, pkgs, lib, ... }:
 
 {
-  # Home Manager needs a bit of information about you and the paths it should
   # manage.
   home.username = "goldencoderam";
   home.homeDirectory = "/home/goldencoderam";
@@ -16,7 +15,8 @@
   home.stateVersion = "24.11"; # Please read the comment before changing.
 
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-   "ngrok"
+    "ngrok"
+    "android-studio-stable"
   ];
 
   # The home.packages option allows you to install Nix packages into your
@@ -44,8 +44,6 @@
     pkgs.xclip
     pkgs.picom
 
-    pkgs.ngrok
-
     pkgs.p7zip
 
     # Tmux session management.
@@ -55,8 +53,17 @@
     # Keyboard remapping
     pkgs.kanata
 
+    # These are mine.
     pkgs.netcat
+
+    pkgs.android-studio
+    pkgs.flutter
+
     pkgs.dbeaver-bin
+
+    # These are for work.
+    pkgs.ngrok
+    pkgs.openvpn
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -132,6 +139,7 @@
 
     java = {
       enable = true;
+      package = pkgs.jdk17;
     };
 
     direnv = {
@@ -163,7 +171,9 @@
 
       # Android Studio related configuration.
       initExtra = ''
-        export PATH=$PATH:$ANDROID_HOME/emulator\nexport PATH=$PATH:$ANDROID_HOME/platform-tools
+        export PATH=$PATH:$ANDROID_HOME/emulator
+        export PATH=$PATH:$ANDROID_HOME/platform-tools
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
         zstyle ':completion:*' menu no
         zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
         bindkey '^y' autosuggest-accept
