@@ -1,6 +1,9 @@
 { config, pkgs, lib, ... }:
 
-{
+let
+  pkgsUnstable = import <nixpkgs-unstable> {};
+in
+  {
   # manage.
   home.username = "goldencoderam";
   home.homeDirectory = "/home/goldencoderam";
@@ -12,11 +15,11 @@
   # You should not change this value, even if you update Home Manager. If you do
   # want to update the value, then make sure to first check the Home Manager
   # release notes.
-  home.stateVersion = "24.11"; # Please read the comment before changing.
+  home.stateVersion = "25.05"; # Please read the comment before changing.
 
   nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-    "ngrok"
     "android-studio-stable"
+    "mongodb-compass"
   ];
 
   # The home.packages option allows you to install Nix packages into your
@@ -38,10 +41,15 @@
     # (pkgs.writeShellScriptBin "my-hello" ''
     #   echo "Hello, ${config.home.username}!"
     # '')
-    pkgs.devenv
+    pkgsUnstable.devenv
+
+    # Nvim related packages.
+    pkgs.luarocks
+    pkgs.nodejs_24
 
     # Clipboard utility for Vim.
     pkgs.xclip
+
     pkgs.picom
 
     pkgs.p7zip
@@ -50,20 +58,17 @@
     pkgs.sesh
     pkgs.tree-sitter
 
-    # Keyboard remapping
-    pkgs.kanata
-
     # These are mine.
     pkgs.netcat
 
-    pkgs.android-studio
-    pkgs.flutter
-
     pkgs.dbeaver-bin
 
-    # These are for work.
-    pkgs.ngrok
-    pkgs.openvpn
+    pkgs.podman-compose
+
+    # Android development
+    pkgs.android-studio
+    pkgs.flutter
+    pkgs.sqlite
   ];
 
   # Home Manager is pretty good at managing dotfiles. The primary way to manage
@@ -98,29 +103,150 @@
   #  /etc/profiles/per-user/goldencoderam/etc/profile.d/hm-session-vars.sh
   #
   home.sessionVariables = {
-    # EDITOR = "emacs";
-    
-    # Android Studio related configuration.
-    ANDROID_HOME="$HOME/Android/Sdk";
+    SHELL = "nu";
+    EDITOR = "nvim";
   };
 
-  home.shellAliases = {
-    tsl = "sesh connect $(sesh list | fzf)";
-  };
+  services = {
+      clipcat = {
+          enable = true;
+          menuSettings = {
+              finder = "rofi";
+              rofi = {
+                  line_length = 80;
+                  menu_length = 30;
+                  menu_prompt = "Clipcat";
+              };
+          };
+      };
 
+    podman = {
+      enable = true;
+    };
 
-  # Creates the Kanata service.
-  systemd.user.services.kanata = {
-    Unit = {
-      Description = "Tool to improve keyboard comfort and usability with advanced customization.";
-    };
-    Install = {
-      WantedBy = [ "default.target" ];
-    };
-    Service = {
-      ExecStart = ''
-        ${pkgs.kanata}/bin/kanata $HOME/.config/kanata/kanata.kbd
-      '';
+    polybar = {
+      enable = true;
+      package = pkgs.polybar.override {
+        i3Support = true;
+        pulseSupport = true;
+      };
+      script = ''
+        for m in $(polybar --list-monitors | ${pkgs.coreutils}/bin/cut -d":" -f1); do
+        MONITOR=$m polybar --reload bottom &
+        done
+        '';
+      settings = {
+        "ash" = {
+          text = "#9c9eb4";
+          subtext1 = "#a6adc3";
+          subtext0 = "#9399ad";
+          overlay2 = "#7f8497";
+          overlay1 = "#686c7d";
+          overlay0 = "#646782";
+          surface2 = "#555873";
+          surface1 = "#31323c";
+          surface0 = "#1e2122";
+          base = "#0a0a0c";
+          mantle = "#020203";
+          crust = "#000000";
+          seafoam = "#8dd3c3";
+          rose = "#e77f88";
+          ember = "#d08770";
+          storm = "#8796aa";
+          crimson = "#bf616a";
+          rust = "#bc735c";
+          frost = "#96a8ad";
+          sage = "#9db89c";
+          tide = "#79a0aa";
+          slate = "#7c7d8c";
+          drift = "#8d9da1";
+          charcoal = "#636778";
+          fog = "#a0a0af";
+          transparent = "#00000000";
+        };
+        "module/i3" = {
+          type = "internal/i3";
+          label-focused = "%index%";
+          label-focused-padding = "1";
+          label-focused-underline = "\${ash.ember}";
+          label-focused-foreground = "\${ash.rose}";
+          label-focused-background = "\${ash.surface0}";
+          label-visible = "%index%";
+          label-visible-padding = "1";
+          label-visible-underline = "\${ash.surface1}";
+          label-visible-background = "\${ash.surface0}";
+          label-unfocused = "%index%";
+          label-unfocused-padding = "1";
+          label-unfocused-foreground = "\${ash.surface2}";
+          label-unfocused-background = "\${ash.surface0}";
+          label-urgent = "%index%";
+          label-urgent-padding = "1";
+          label-urgent-foreground = "\${ash.mantle}";
+          label-urgent-underline = "\${ash.seafoam}";
+          label-urgent-background = "\${ash.tide}";
+        };
+        "module/volume" = {
+          type = "internal/pulseaudio";
+          click-right = "pavucontrol &";
+          format-volume = "<ramp-volume> <label-volume>";
+          label-muted = " ";
+          ramp-volume-0 = "";
+          ramp-volume-1 = " ";
+          ramp-volume-2 = " ";
+          label-muted-foreground = "#666";
+        };
+        "module/time" = {
+          type = "internal/date";
+          interval = "1";
+          date = "%Y/%m/%d | %H:%M";
+        };
+        "module/filesystem" = {
+          type = "internal/fs";
+          interval = "5";
+          mount-0 = "/";
+          label-mounted = "%free%";
+          label-mounted-foreground = "\${ash.charcoal}";
+        };
+        "module/cpu" = {
+          type = "internal/cpu";
+          warn-percentage = "80";
+          format = "<label>";
+          label = "%percentage%  ";
+          format-warn = "<label-warn>";
+          label-warn = "%{F#bf616a}%percentage%   %{F-}";
+        };
+        "module/temp" = {
+          type = "internal/temperature";
+          interval = "1";
+          thermal-zone = "0";
+          hwmon-path = "/sys/devices/platform/coretemp.0/hwmon/hwmon2/temp1_input";
+          base-temperature = "20";
+          warn-temperature = "70";
+          label = "%temperature-c% ";
+          label-warn = "%{F#d08770}%temperature-c%   %{F-}";
+        };
+        "module/tray" = {
+          type = "internal/tray";
+          tray-spacing = "8px";
+        };
+      };
+      config = {
+        "bar/bottom" = {
+          monitor = "\${env:MONITOR:}";
+          bottom = true;
+          font-0 = "CommitMono Nerd Font:size=10";
+          modules-left = "i3";
+          modules-right = "temp filesystem cpu time volume tray";
+          separator = " : ";
+          height = "20pt";
+          background = "\${ash.transparent}";
+          foreground = "\${ash.text}";
+          padding-left = "10pt";
+          padding-right = "10pt";
+          line-size = 5;
+          enable-ipc = true;
+        };
+      };
     };
   };
 
@@ -133,57 +259,64 @@
     fzf = {
       enable = true;
 
-      enableZshIntegration = true;
       tmux.enableShellIntegration = true;
-    };
-
-    java = {
-      enable = true;
-      package = pkgs.jdk17;
     };
 
     direnv = {
       enable = true;
-      enableZshIntegration = true;
+      enableNushellIntegration = true;
       nix-direnv.enable = true;
     };
 
-    zsh = {
+    carapace = {
+      enable = true;
+      enableNushellIntegration = true;
+    };
+
+    nushell = {
       enable = true;
 
-      enableCompletion = true;
-      syntaxHighlighting.enable = true;
-      autosuggestion.enable = true;
+      plugins = [
+        pkgs.nushellPlugins.query
+      ];
 
-      historySubstringSearch = {
-        enable = true;
-
-        searchUpKey = "^p";
-        searchDownKey = "^n";
+      shellAliases = {
+        tsl = "sesh connect (sesh list | fzf)";
       };
+      extraConfig = ''
+        $env.config.edit_mode = "vi"
 
-      antidote = {
-        enable = true;
-        plugins = [
-          "Aloxaf/fzf-tab"
-        ];
-      };
+        # Direnv config.
+        $env.config.hooks = {
+          pre_prompt: [{ || 
+            if (which direnv | is-empty) {
+              return
+            }
 
-      # Android Studio related configuration.
-      initExtra = ''
-        export PATH=$PATH:$ANDROID_HOME/emulator
-        export PATH=$PATH:$ANDROID_HOME/platform-tools
-        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-        zstyle ':completion:*' menu no
-        zstyle ':fzf-tab:complete:cd:*' fzf-preview 'ls --color $realpath'
-        bindkey '^y' autosuggest-accept
+            direnv export json | from json | default {} | load-env
+            if "ENV_CONVERSIONS" in $env and "PATH" in $env.ENV_CONVERSIONS {
+              $env.PATH = do $env.ENV_CONVERSIONS.PATH.from_string $env.PATH
+            }
+          }]
+        }
+
+        # Keybind config.
+        $env.config.keybindings = [
+          {
+            name: history_hint_complete
+            modifier: control
+            keycode: char_y
+            mode: [vi_normal, vi_insert]
+            event: { send: HistoryHintComplete }
+          }
+        ]
       '';
     };
 
     oh-my-posh = {
       enable = true;
 
-      enableZshIntegration = true;
+      enableNushellIntegration = true;
       settings = builtins.fromJSON(''
         {
           "version": 2,
@@ -274,11 +407,14 @@
 
     feh.enable = true;
 
-    zoxide.enable = true;
+    zoxide = {
+      enable = true;
+      enableNushellIntegration = true;
+    };
 
     tmux = {
       enable = true;
-      shell = "${pkgs.zsh}/bin/zsh";
+      shell = "${pkgs.nushell}/bin/nu";
       baseIndex = 1;
       prefix = "C-Space";
       keyMode = "vi";
